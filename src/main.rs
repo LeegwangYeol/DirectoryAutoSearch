@@ -1,58 +1,45 @@
-use std::fs::{self, File};
-use std::io::{self, BufRead};
-// use std::path::Path;
+use rayon::prelude::*;
+use std::fs::File;
+use std::io;
+use std::time::Instant;
+use walkdir::WalkDir;
 
 fn main() -> io::Result<()> {
+    let start_time = Instant::now();
+
     // 검색할 문자열
     let target = "rasberry";
 
     // 현재 디렉토리 경로
     let current_dir = std::env::current_dir()?;
 
-    // 디렉토리 내 파일 탐색
-    for entry in fs::read_dir(current_dir)? {
-        let entry = entry?;
-        let path = entry.path();
+    let walker = WalkDir::new(current_dir).into_iter();
 
-        // 확장자가 xml 또는 txt 인지 확인
-        if let Some(ext) = path.extension() {
-            if ext == "xml" || ext == "txt" {
-                // 파일 열기 시도
-                match File::open(&path) {
-                    Ok(file) => {
-                        let reader = io::BufReader::new(file);
-                        
-                        // 각 라인별로 검색
-                        for (idx, line) in reader.lines().enumerate() {
-                            match line {
-                                Ok(line_content) if line_content.contains(target) => {
-                                    println!(
-                                        "파일: {:?}, 라인: {}, 내용: {}",
-                                        path.file_name().unwrap_or_default(),
-                                        idx + 1,
-                                        line_content.trim()
-                                    );
-                                }
-                                Err(e) => {
-                                    eprintln!("경고: 파일 {:?}의 {}번째 라인을 읽는 중 오류 발생: {}", 
-                                        path.file_name().unwrap_or_default(), 
-                                        idx + 1, 
-                                        e
-                                    );
-                                    continue; // 다음 라인으로 계속 진행
-                                }
-                                _ => {}
+    // 재귀적으로 디렉토리를 탐색하고 병렬로 처리합니다.
+    walker
+        .filter_map(Result::ok)
+        .par_bridge()
+        .filter(|entry| entry.file_type().is_file())
+        .for_each(|entry| {
+            let path = entry.path();
+            if let Some(ext) = path.extension() {
+                if ext == "xml" || ext == "txt" {
+                    if let Ok(file) = File::open(path) {
+                        if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
+                            if memchr::memmem::find(&mmap, target.as_bytes()).is_some() {
+                                // 메모리 매핑을 사용하면 특정 줄 번호를 찾는 것이 더 복잡해집니다.
+                                // 여기서는 파일 이름만 출력합니다.
+                                println!("Found in file: {:?}", path);
                             }
                         }
                     }
-                    Err(e) => {
-                        eprintln!("경고: 파일을 열 수 없습니다: {:?} - {}", path, e);
-                        continue; // 다음 파일로 계속 진행
-                    }
                 }
             }
-        }
-    }
+        });
+
+    let duration = start_time.elapsed();
+    println!("검색 완료. 총 소요 시간: {:?}", duration);
 
     Ok(())
 }
+
