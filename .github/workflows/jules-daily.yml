@@ -3,7 +3,7 @@ name: Jules Daily Check
 on:
   schedule:
     # INFO : GitHub evaluates cron in UTC, not KST
-    - cron: '27 21 * * *'
+    - cron: '27'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,21 @@ jobs:
               answer you chose under "Assumptions" in the pull request body, then continue.
             - When several candidates qualify, any one is fine. Pick one and go;
               the next daily run picks up the others.
+            - Earlier daily runs may already be fixing something. Run `git fetch origin` and
+              `git branch -r` first; skip any issue that an existing fix branch already addresses.
             - If you cannot settle on a safe fix, finish without changes and without a pull request.
+
+            ## This repository
+            Rust side project: a single binary (`src/main.rs`) that walks the current directory in parallel (walkdir + rayon), memory-maps `.xml` / `.txt` files and prints the ones containing a hard-coded search string (memchr). `source1.txt` is sample data.
+
+            Setup and checks:
+            - `cargo build` and `cargo clippy` (edition 2024 needs a recent toolchain; `rustup update stable` if needed). There are no tests; `cargo run` in a temporary directory with a sample file is the check.
+
+            Focus:
+            - Zero-length files (mapping an empty file can panic), permission errors that are silently skipped, symlink loops, and the hard-coded target string (keep it; this is a toy).
+
+            Leave alone:
+            - Dependency versions unless they fail to build.
 
             ## Goal
             Find ONE real defect and fix it in a small, safe pull request.
@@ -67,6 +81,8 @@ jobs:
             - How it was verified (build/test command and result)
             - Not fixed (problems that need a decision), or "none"
             - Assumptions (questions you would have asked, with the answer you chose), or "none"
+            - Prompt feedback (instructions above that were wrong, missing or unclear for this
+              repository, e.g. a build command that does not exist), or "none"
 
             Reminder: do not ask questions. Decide, finish, and open the pull request or stop.
         run: |
