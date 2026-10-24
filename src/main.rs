@@ -17,7 +17,13 @@ fn main() -> io::Result<()> {
 
     // 재귀적으로 디렉토리를 탐색하고 병렬로 처리합니다.
     walker
-        .filter_map(Result::ok)
+        .filter_map(|res| match res {
+            Ok(entry) => Some(entry),
+            Err(e) => {
+                eprintln!("Error accessing file: {}", e);
+                None
+            }
+        })
         .par_bridge()
         .filter(|entry| entry.file_type().is_file())
         .for_each(|entry| {
