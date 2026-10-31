@@ -25,11 +25,13 @@ fn main() -> io::Result<()> {
             if let Some(ext) = path.extension() {
                 if ext == "xml" || ext == "txt" {
                     if let Ok(file) = File::open(path) {
-                        if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
-                            if memchr::memmem::find(&mmap, target.as_bytes()).is_some() {
-                                // 메모리 매핑을 사용하면 특정 줄 번호를 찾는 것이 더 복잡해집니다.
-                                // 여기서는 파일 이름만 출력합니다.
-                                println!("Found in file: {:?}", path);
+                        if file.metadata().map(|m| m.len()).unwrap_or(0) > 0 {
+                            if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
+                                if memchr::memmem::find(&mmap, target.as_bytes()).is_some() {
+                                    // 메모리 매핑을 사용하면 특정 줄 번호를 찾는 가장 간단한 방법이 복잡해집니다.
+                                    // 여기서는 파일 이름만 출력합니다.
+                                    println!("Found in file: {:?}", path);
+                                }
                             }
                         }
                     }
