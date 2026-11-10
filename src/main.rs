@@ -9,6 +9,7 @@ fn main() -> io::Result<()> {
 
     // 검색할 문자열
     let target = "rasberry";
+    let finder = memchr::memmem::Finder::new(target);
 
     // 현재 디렉토리 경로
     let current_dir = std::env::current_dir()?;
@@ -26,7 +27,7 @@ fn main() -> io::Result<()> {
                 if ext == "xml" || ext == "txt" {
                     if let Ok(file) = File::open(path) {
                         if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
-                            if memchr::memmem::find(&mmap, target.as_bytes()).is_some() {
+                            if finder.find(&mmap).is_some() {
                                 // 메모리 매핑을 사용하면 특정 줄 번호를 찾는 것이 더 복잡해집니다.
                                 // 여기서는 파일 이름만 출력합니다.
                                 println!("Found in file: {:?}", path);
